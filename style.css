@@ -428,7 +428,7 @@ strong {
 }
 
 .nav-desktop a {
-  color: var(--text-muted);
+  color: #d7deea;
   position: relative;
   transition: color 0.25s ease;
 }
