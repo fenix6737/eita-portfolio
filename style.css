@@ -245,7 +245,7 @@ strong {
   transform: translate3d(calc(var(--mx) * 8px), calc(var(--my) * 6px), 0);
 }
 
-/* Background whale — articulated swim */
+/* Background whale — articulated swim (stays in viewport) */
 .whale-field {
   position: absolute;
   inset: 0;
@@ -257,11 +257,12 @@ strong {
   position: absolute;
   left: 0;
   top: 0;
-  width: min(62vw, 680px);
+  width: min(38vw, 420px);
   will-change: transform;
   opacity: 0.72;
   filter: drop-shadow(0 14px 32px rgba(124, 92, 255, 0.38));
-  transform: translate3d(-40%, 40%, 0);
+  transform: translate3d(20%, 40%, 0);
+  transform-origin: center center;
 }
 
 .whale-svg {
@@ -271,15 +272,11 @@ strong {
   overflow: visible;
 }
 
-.whale.is-flipped .whale-svg {
-  transform: scaleX(-1);
-}
-
 .whale-wake {
   position: absolute;
-  right: 4%;
+  right: 2%;
   top: 52%;
-  width: 34%;
+  width: 28%;
   height: 3px;
   border-radius: 999px;
   background: linear-gradient(90deg, rgba(94, 231, 247, 0.45), transparent 80%);
@@ -290,16 +287,9 @@ strong {
   will-change: transform, opacity;
 }
 
-.whale.is-flipped .whale-wake {
-  right: auto;
-  left: 4%;
-  background: linear-gradient(270deg, rgba(94, 231, 247, 0.45), transparent 80%);
-  transform-origin: left center;
-}
-
 .whale-bubbles {
   position: absolute;
-  inset: 20% 8% 30% 55%;
+  inset: 20% 55% 30% 8%;
   pointer-events: none;
   background:
     radial-gradient(circle at 20% 60%, rgba(255, 255, 255, 0.35) 0 2px, transparent 3px),
@@ -309,10 +299,6 @@ strong {
   opacity: 0;
   filter: blur(0.4px);
   will-change: transform, opacity;
-}
-
-.whale.is-flipped .whale-bubbles {
-  inset: 20% 55% 30% 8%;
 }
 
 @keyframes glowBreathe {

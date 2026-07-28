@@ -324,7 +324,7 @@
 
   initParticleField();
 
-  /* Articulated swimming whale — SVG rotate(a,cx,cy) for reliable joints */
+  /* Articulated swimming whale — floats inside viewport, turns by rotation */
   const initWhale = () => {
     const whale = document.getElementById("whale");
     const body = document.getElementById("whaleBody");
@@ -340,7 +340,8 @@
       return;
     }
 
-    // Joint pivots in SVG viewBox space
+    whale.classList.remove("is-flipped");
+
     const P = {
       body: [300, 130],
       head: [200, 128],
@@ -353,32 +354,60 @@
       el.setAttribute("transform", `rotate(${deg.toFixed(2)} ${cx} ${cy})`);
     };
 
-    let w = window.innerWidth;
-    let h = window.innerHeight;
-    let x = w * 0.2;
-    let y = h * 0.45;
-    // Heading-based swim (no sudden vx flips)
-    let heading = 0; // 0 = right
-    let targetHeading = 0;
-    let speed = 0.28;
-    let t = 0;
-    let phase = Math.random() * Math.PI * 2;
-    let nextSteer = 8 + Math.random() * 10; // seconds
-    let pitch = 0;
-    let bank = 0;
-    let facingRight = true; // SVG art faces left; flip when moving right
-    let last = performance.now();
-
     const TAU = Math.PI * 2;
-    const wrapAngle = (a) => {
-      a = ((a + Math.PI) % TAU + TAU) % TAU - Math.PI;
-      return a;
-    };
+    const ART_NOSE = Math.PI; // SVG faces left
+    const wrapAngle = (a) => ((a + Math.PI) % TAU + TAU) % TAU - Math.PI;
     const lerpAngle = (from, to, k) => from + wrapAngle(to - from) * k;
 
-    const resize = () => {
+    let w = window.innerWidth;
+    let h = window.innerHeight;
+    let whaleW = 0;
+    let whaleH = 0;
+    let margin = 24;
+    let cx = w * 0.35;
+    let cy = h * 0.48;
+    let heading = 0;
+    let targetHeading = 0;
+    let speed = 0.2;
+    let t = 0;
+    let phase = Math.random() * Math.PI * 2;
+    let nextSteer = 6 + Math.random() * 8;
+    let bank = 0;
+    let last = performance.now();
+
+    const measure = () => {
       w = window.innerWidth;
       h = window.innerHeight;
+      whaleW = whale.offsetWidth || Math.min(w * 0.38, 420);
+      whaleH = whaleW * (240 / 640);
+      margin = Math.max(16, Math.min(36, w * 0.03));
+    };
+
+    const bounds = () => {
+      // Use diagonal radius so rotated whale still stays fully inside
+      const radius = Math.hypot(whaleW, whaleH) * 0.42;
+      return {
+        minX: margin + radius,
+        maxX: w - margin - radius,
+        minY: margin + radius + 48,
+        maxY: h - margin - radius,
+      };
+    };
+
+    const steerAwayFromEdges = () => {
+      const b = bounds();
+      const soft = Math.min(w, h) * 0.18;
+      let pullX = 0;
+      let pullY = 0;
+
+      if (cx < b.minX + soft) pullX += (b.minX + soft - cx) / soft;
+      if (cx > b.maxX - soft) pullX -= (cx - (b.maxX - soft)) / soft;
+      if (cy < b.minY + soft) pullY += (b.minY + soft - cy) / soft;
+      if (cy > b.maxY - soft) pullY -= (cy - (b.maxY - soft)) / soft;
+
+      if (pullX !== 0 || pullY !== 0) {
+        targetHeading = Math.atan2(pullY, pullX);
+      }
     };
 
     const swim = (now) => {
@@ -386,94 +415,85 @@
       last = now;
       t += dt;
 
-      // Soft path wander — gentle course changes only
       nextSteer -= dt;
       if (nextSteer <= 0) {
-        targetHeading += (Math.random() - 0.5) * 0.7; // ~±40°
-        nextSteer = 10 + Math.random() * 14;
+        const bigTurn = Math.random() > 0.72;
+        targetHeading += bigTurn
+          ? (Math.random() > 0.5 ? 1 : -1) * (1.2 + Math.random() * 1.4)
+          : (Math.random() - 0.5) * 0.9;
+        nextSteer = 7 + Math.random() * 11;
       }
 
-      // Edge avoidance: ease toward opposite direction (no teleport flip)
-      const marginX = Math.min(w * 0.62, 680) * 0.2;
-      const minY = h * 0.18;
-      const maxY = h * 0.68;
-      if (x < marginX) targetHeading = lerpAngle(targetHeading, 0, 0.04);
-      else if (x > w - marginX) targetHeading = lerpAngle(targetHeading, Math.PI, 0.04);
-      if (y < minY) targetHeading = lerpAngle(targetHeading, Math.PI * 0.5, 0.035);
-      else if (y > maxY) targetHeading = lerpAngle(targetHeading, -Math.PI * 0.5, 0.035);
+      steerAwayFromEdges();
 
-      // Slow turn rate
-      heading = lerpAngle(heading, targetHeading, 1 - Math.pow(0.92, dt * 60));
+      const turnErr = wrapAngle(targetHeading - heading);
+      const turnK = 1 - Math.pow(0.965, dt * 60);
+      heading = lerpAngle(heading, targetHeading, turnK);
 
-      // Calm cruise + light tail thrust
-      const cruise = 0.22 + Math.abs(Math.sin(t * 0.05)) * 0.08;
-      const thrust = Math.max(0, Math.sin(phase)) * 0.06;
-      speed += (cruise + thrust - speed) * 0.04;
+      const turnMag = Math.min(1, Math.abs(turnErr) / 1.2);
+      const cruise = 0.16 + Math.abs(Math.sin(t * 0.045)) * 0.06;
+      const thrust = Math.max(0, Math.sin(phase)) * 0.045;
+      const desiredSpeed = (cruise + thrust) * (1 - turnMag * 0.55);
+      speed += (desiredSpeed - speed) * 0.05;
 
-      const vx = Math.cos(heading) * speed;
-      const vy = Math.sin(heading) * speed * 0.55;
-      x += vx * (dt * 60);
-      y += vy * (dt * 60);
+      cx += Math.cos(heading) * speed * (dt * 60);
+      cy += Math.sin(heading) * speed * (dt * 60) * 0.85;
 
-      y = Math.max(minY, Math.min(maxY, y));
+      const b = bounds();
+      cx = Math.max(b.minX, Math.min(b.maxX, cx));
+      cy = Math.max(b.minY, Math.min(b.maxY, cy));
 
-      // Soft wrap only when fully off-screen
-      const whaleW = Math.min(w * 0.62, 680);
-      if (x > w + whaleW * 0.35) x = -whaleW * 0.25;
-      else if (x < -whaleW * 0.35) x = w + whaleW * 0.2;
+      const desiredBank = Math.max(-22, Math.min(22, -turnErr * 28));
+      bank += (desiredBank - bank) * 0.06;
 
-      // SVG default faces left — flip when heading right (hysteresis)
-      const hx = Math.cos(heading);
-      if (!facingRight && hx > 0.25) facingRight = true;
-      else if (facingRight && hx < -0.25) facingRight = false;
-      whale.classList.toggle("is-flipped", facingRight);
-
-      // Slow swim cycle
-      phase += dt * (1.35 + speed * 1.8);
-      const amp = 0.7 + Math.min(0.35, speed * 0.8);
+      phase += dt * (1.2 + speed * 1.6);
+      const amp = 0.65 + Math.min(0.3, speed);
       const s = Math.sin(phase);
       const s2 = Math.sin(phase - 0.55);
       const s3 = Math.sin(phase - 1.1);
 
-      const headDeg = -s * 5 * amp;
-      const bodyDeg = s2 * 5.5 * amp;
-      const peduncleDeg = s3 * 14 * amp;
-      const flukeDeg = Math.sin(phase - 1.45) * 24 * amp;
-      const finDeg = Math.sin(phase * 0.9 + 1.2) * 16 * amp;
-
-      const desiredPitch = Math.max(-8, Math.min(8, Math.sin(heading) * 8));
-      const turnRate = wrapAngle(targetHeading - heading);
-      const desiredBank = Math.max(-6, Math.min(6, -turnRate * 18));
-      pitch += (desiredPitch - pitch) * 0.04;
-      bank += (desiredBank - bank) * 0.035;
-
-      setRot(body, bodyDeg + pitch * 0.35, P.body);
-      setRot(head, headDeg, P.head);
-      setRot(fin, finDeg, P.fin);
-      setRot(peduncle, peduncleDeg, P.peduncle);
-      setRot(fluke, flukeDeg, P.fluke);
+      setRot(body, s2 * 5 * amp + bank * 0.15, P.body);
+      setRot(head, -s * 4.5 * amp, P.head);
+      setRot(fin, Math.sin(phase * 0.9 + 1.2) * 14 * amp, P.fin);
+      setRot(peduncle, s3 * 13 * amp, P.peduncle);
+      setRot(fluke, Math.sin(phase - 1.45) * 22 * amp, P.fluke);
 
       if (wake) {
-        const wakeScale = 0.7 + (0.5 + s * 0.5) * 0.55;
-        wake.style.opacity = String(0.2 + (0.5 + s * 0.5) * 0.35);
+        const wakeScale = 0.65 + (0.5 + s * 0.5) * 0.5;
+        wake.style.opacity = String(0.18 + (0.5 + s * 0.5) * 0.32);
         wake.style.transform = `translateY(-50%) scaleX(${wakeScale})`;
       }
 
       if (bubbles) {
         const burst = Math.max(0, s);
-        bubbles.style.opacity = String(0.1 + burst * 0.45);
-        bubbles.style.transform = `translate(${facingRight ? burst * 10 : -burst * 10}px, ${-burst * 12}px)`;
+        bubbles.style.opacity = String(0.08 + burst * 0.4);
+        bubbles.style.transform = `translate(${-burst * 8}px, ${-burst * 10}px)`;
       }
 
-      const depthParallax = curMX * -18;
-      const depthY = curMY * -10;
-      whale.style.transform = `translate3d(${x + depthParallax}px, ${y + depthY}px, 0) rotate(${bank.toFixed(2)}deg)`;
+      const visualDeg = ((heading + ART_NOSE) * 180) / Math.PI;
+      const depthX = curMX * -8;
+      const depthY = curMY * -5;
+      const b2 = bounds();
+      const drawX = Math.max(b2.minX, Math.min(b2.maxX, cx + depthX));
+      const drawY = Math.max(b2.minY, Math.min(b2.maxY, cy + depthY));
+      whale.style.transform = `translate3d(${drawX.toFixed(2)}px, ${drawY.toFixed(2)}px, 0) translate(-50%, -50%) rotate(${visualDeg.toFixed(2)}deg)`;
 
       requestAnimationFrame(swim);
     };
 
-    resize();
-    window.addEventListener("resize", resize, { passive: true });
+    measure();
+    heading = 0;
+    targetHeading = 0;
+    window.addEventListener(
+      "resize",
+      () => {
+        measure();
+        const b = bounds();
+        cx = Math.max(b.minX, Math.min(b.maxX, cx));
+        cy = Math.max(b.minY, Math.min(b.maxY, cy));
+      },
+      { passive: true }
+    );
     requestAnimationFrame(swim);
   };
 
