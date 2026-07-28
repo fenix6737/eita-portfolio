@@ -243,10 +243,10 @@ strong {
   position: absolute;
   left: 0;
   top: 0;
-  width: min(58vw, 620px);
+  width: min(62vw, 680px);
   will-change: transform;
-  opacity: 0.5;
-  filter: drop-shadow(0 12px 28px rgba(124, 92, 255, 0.28));
+  opacity: 0.72;
+  filter: drop-shadow(0 14px 32px rgba(124, 92, 255, 0.38));
   transform: translate3d(-40%, 40%, 0);
 }
 
@@ -259,36 +259,6 @@ strong {
 
 .whale.is-flipped .whale-svg {
   transform: scaleX(-1);
-}
-
-.whale #whaleBody,
-.whale #whaleHead,
-.whale #whaleFin,
-.whale #whalePeduncle,
-.whale #whaleFluke {
-  transform-box: fill-box;
-  transform-origin: center;
-  will-change: transform;
-}
-
-.whale #whaleBody {
-  transform-origin: 55% 55%;
-}
-
-.whale #whaleHead {
-  transform-origin: 70% 50%;
-}
-
-.whale #whaleFin {
-  transform-origin: 20% 15%;
-}
-
-.whale #whalePeduncle {
-  transform-origin: 8% 50%;
-}
-
-.whale #whaleFluke {
-  transform-origin: 12% 50%;
 }
 
 .whale-wake {
