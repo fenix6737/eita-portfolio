@@ -220,18 +220,26 @@
         <header class="section-header">
           <p class="section-label">Pricing</p>
           <h2 class="section-title">料金プラン</h2>
-          <p class="section-desc">入りやすい入口を作りつつ、しっかり品質を出せる価格帯でご案内しています。予算に合わせて柔軟に対応可能です。</p>
+          <p class="section-desc">復帰キャンペーン実施中。通常料金から全プラン半額でご案内しています（2026年9月末まで）。</p>
         </header>
+
+        <div class="campaign-banner" role="status">
+          <p class="campaign-badge">Comeback Campaign</p>
+          <h3>復帰キャンペーン — 全料金 半額</h3>
+          <p>適用期間：<strong>〜2026年9月30日</strong> ご依頼分まで。BOOTH掲載の3Dモデルは期間に関係なく<strong>無料でご利用可能</strong>です。</p>
+        </div>
 
         <div class="pricing-grid">
           <article class="price-card">
             <p class="price-badge">Light</p>
             <h3>ライト</h3>
-            <p class="price-amount"><span class="price-yen">¥</span>8,000</p>
+            <p class="price-was"><span class="price-yen">¥</span>8,000</p>
+            <p class="price-amount"><span class="price-yen">¥</span>4,000</p>
+            <p class="price-campaign-label">キャンペーン半額</p>
             <p class="price-desc">1枚絵ベースの歌詞動画／シンプルエフェクト</p>
             <ul class="price-meta">
               <li>納期目安：5〜10日</li>
-              <li>実績・レビュー獲得向け</li>
+              <li>初めての依頼・シンプル構成向け</li>
             </ul>
             <a href="#contact" class="btn btn-secondary">このプランで相談</a>
           </article>
@@ -239,11 +247,13 @@
           <article class="price-card price-card--featured">
             <p class="price-badge">Standard / おすすめ</p>
             <h3>スタンダード</h3>
-            <p class="price-amount"><span class="price-yen">¥</span>15,000</p>
+            <p class="price-was"><span class="price-yen">¥</span>15,000</p>
+            <p class="price-amount"><span class="price-yen">¥</span>7,500</p>
+            <p class="price-campaign-label">キャンペーン半額</p>
             <p class="price-desc">複数素材・中程度の動き・テキストモーション</p>
             <ul class="price-meta">
               <li>納期目安：7〜14日</li>
-              <li>メイン商品・依頼が集まりやすい帯</li>
+              <li>メイン商品・バランス重視</li>
             </ul>
             <a href="#contact" class="btn btn-primary">このプランで相談</a>
           </article>
@@ -251,23 +261,37 @@
           <article class="price-card">
             <p class="price-badge">Premium</p>
             <h3>プレミアム</h3>
-            <p class="price-amount"><span class="price-yen">¥</span>25,000<span class="price-range">〜</span>35,000</p>
-            <p class="price-desc">オリジナル構成・凝ったカメラワーク・雰囲気重視</p>
+            <p class="price-desc">内容で料金が分かれます。どちらかを選んでご相談ください。</p>
+            <div class="price-tiers">
+              <div class="price-tier">
+                <p class="price-tier-name">プレミアム A</p>
+                <p class="price-was price-was--inline"><span class="price-yen">¥</span>25,000</p>
+                <p class="price-amount price-amount--tier"><span class="price-yen">¥</span>12,500</p>
+                <p class="price-tier-desc">オリジナル構成・雰囲気重視の映像</p>
+              </div>
+              <div class="price-tier">
+                <p class="price-tier-name">プレミアム B</p>
+                <p class="price-was price-was--inline"><span class="price-yen">¥</span>35,000</p>
+                <p class="price-amount price-amount--tier"><span class="price-yen">¥</span>17,500</p>
+                <p class="price-tier-desc">凝ったカメラワーク・高密度な演出込み</p>
+              </div>
+            </div>
             <ul class="price-meta">
               <li>納期目安：10〜20日</li>
-              <li>差別化・高単価向け</li>
+              <li>差別化・クオリティ重視向け</li>
             </ul>
             <a href="#contact" class="btn btn-secondary">このプランで相談</a>
           </article>
 
           <article class="price-card">
-            <p class="price-badge">3DCG</p>
-            <h3>3Dモデル制作</h3>
-            <p class="price-amount"><span class="price-yen">¥</span>5,000<span class="price-range">〜</span>20,000</p>
-            <p class="price-desc">簡易アセット／背景など（要相談）</p>
+            <p class="price-badge">3DCG / BOOTH</p>
+            <h3>3Dモデル</h3>
+            <p class="price-amount"><span class="price-free">無料</span></p>
+            <p class="price-campaign-label">BOOTH掲載モデル</p>
+            <p class="price-desc">BOOTHに公開中の3Dモデルは無料でご利用いただけます。</p>
             <ul class="price-meta">
-              <li>納期目安：要相談</li>
-              <li>BOOTH販売との連携可</li>
+              <li>オーダーメイド制作は要相談</li>
+              <li>オーダー時もキャンペーン半額対象</li>
             </ul>
             <a href="#booth" class="btn btn-secondary">BOOTHを見る</a>
           </article>
@@ -277,13 +301,17 @@
           <div>
             <p class="price-badge">Option</p>
             <h3>オプション</h3>
-            <p class="price-desc">楽曲5分超（1分ごと）／追加修正／急ぎ納品など、柔軟に対応します。</p>
+            <p class="price-desc">楽曲5分超（1分ごと）／追加修正／急ぎ納品など。キャンペーン中はこちらも半額です。</p>
           </div>
-          <p class="price-amount price-amount--sm"><span class="price-yen">+</span>¥1,000<span class="price-range">〜</span>3,000</p>
+          <div class="price-option-amounts">
+            <p class="price-was price-was--inline"><span class="price-yen">+</span>¥1,000〜3,000</p>
+            <p class="price-amount price-amount--sm"><span class="price-yen">+</span>¥500〜1,500</p>
+          </div>
         </div>
 
         <p class="pricing-note">
-          実績動画は <a class="inline-link" href="#works">Works</a> または
+          キャンペーン適用は<strong>2026年9月30日までのご依頼</strong>が対象です。実績は
+          <a class="inline-link" href="#works">Works</a> ／
           <a class="inline-link" href="https://foriio.com/eita00eizo" target="_blank" rel="noopener noreferrer">Foriio</a>
           をご覧ください。ご依頼は
           <a class="inline-link" href="https://coconala.com/users/5095169" target="_blank" rel="noopener noreferrer">ココナラ</a>
@@ -364,18 +392,19 @@
         <header class="section-header">
           <p class="section-label">3DCG / BOOTH</p>
           <h2 class="section-title">モデル販売</h2>
-          <p class="section-desc">3Dモデル・素材の販売／配布は BOOTH で公開しています。</p>
+          <p class="section-desc">BOOTH公開中の3Dモデルは無料でご利用いただけます。</p>
         </header>
         <div class="booth-banner">
           <div class="booth-banner-content">
             <h3>eitazo — BOOTH</h3>
             <p>
-              ストア：<a class="inline-link" href="https://eitazo.booth.pm" target="_blank" rel="noopener noreferrer">eitazo.booth.pm</a>
+              ストア：<a class="inline-link" href="https://eitazo.booth.pm" target="_blank" rel="noopener noreferrer">eitazo.booth.pm</a><br>
+              掲載モデルは<strong>無料</strong>でご利用可能です。
             </p>
             <div class="booth-actions">
-              <a class="btn btn-primary" href="https://eitazo.booth.pm" target="_blank" rel="noopener noreferrer">BOOTHで見る</a>
+              <a class="btn btn-primary" href="https://eitazo.booth.pm" target="_blank" rel="noopener noreferrer">BOOTHで見る（無料）</a>
             </div>
-            <p class="booth-note">商品一覧は BOOTH 側の公開設定に応じて表示されます。最新の販売状況はストアページでご確認ください。</p>
+            <p class="booth-note">オーダーメイドの3D制作は要相談です。映像制作プランは <a class="inline-link" href="#pricing">Pricing</a> の復帰キャンペーン（9月末まで半額）をご確認ください。</p>
           </div>
           <a class="booth-store-card" href="https://eitazo.booth.pm" target="_blank" rel="noopener noreferrer" aria-label="BOOTHストアへ">
             <img
@@ -443,7 +472,7 @@
             <span class="btn btn-primary btn-sm">BOOTHで見る</span>
           </a>
         </div>
-        <p class="contact-note">料金は <a class="inline-link" href="#pricing">Pricing</a> に記載のプランを基準に、予算に合わせて柔軟に対応します。</p>
+        <p class="contact-note">料金は <a class="inline-link" href="#pricing">Pricing</a> の復帰キャンペーン（〜2026年9月30日・全プラン半額）を基準に、予算に合わせて柔軟に対応します。BOOTHの3Dモデルは無料です。</p>
       </div>
     </section>
   </main>

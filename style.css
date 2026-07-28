@@ -1044,6 +1044,39 @@ body.is-ready .cine-in {
 }
 
 /* Pricing */
+.campaign-banner {
+  margin: 0 auto 2rem;
+  max-width: 48rem;
+  padding: 1.35rem 1.5rem;
+  border-radius: var(--radius);
+  border: 1px solid rgba(167, 139, 250, 0.45);
+  background:
+    radial-gradient(ellipse at top right, rgba(124, 92, 255, 0.22), transparent 55%),
+    rgba(28, 24, 52, 0.9);
+  text-align: center;
+}
+
+.campaign-badge {
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--purple-soft);
+  margin-bottom: 0.45rem;
+}
+
+.campaign-banner h3 {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.campaign-banner p {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
 .pricing-grid {
   display: grid;
   gap: 1.25rem;
@@ -1090,12 +1123,24 @@ body.is-ready .cine-in {
   margin-bottom: 0.75rem;
 }
 
+.price-was {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  color: #9aa3b5;
+  text-decoration: line-through;
+  margin-bottom: 0.15rem;
+}
+
+.price-was--inline {
+  margin-bottom: 0.1rem;
+}
+
 .price-amount {
   font-family: var(--font-display);
   font-size: clamp(1.7rem, 3vw, 2.1rem);
   font-weight: 800;
   letter-spacing: 0.02em;
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.35rem;
   background: linear-gradient(120deg, var(--purple), var(--cyan));
   -webkit-background-clip: text;
   background-clip: text;
@@ -1106,6 +1151,26 @@ body.is-ready .cine-in {
   font-size: clamp(1.35rem, 2.5vw, 1.75rem);
   margin-bottom: 0;
   white-space: nowrap;
+}
+
+.price-amount--tier {
+  font-size: 1.45rem;
+  margin-bottom: 0.25rem;
+}
+
+.price-campaign-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--purple-soft);
+  margin-bottom: 0.85rem;
+}
+
+.price-free {
+  background: none;
+  -webkit-background-clip: unset;
+  background-clip: unset;
+  color: #fff;
 }
 
 .price-yen {
@@ -1124,6 +1189,34 @@ body.is-ready .cine-in {
   font-size: 0.95rem;
   margin-bottom: 1rem;
   flex: 1;
+}
+
+.price-tiers {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.price-tier {
+  padding: 0.85rem 0.95rem;
+  border-radius: 10px;
+  border: 1px solid rgba(167, 139, 250, 0.28);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.price-tier-name {
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #e8ecf5;
+  margin-bottom: 0.35rem;
+}
+
+.price-tier-desc {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
 }
 
 .price-meta {
@@ -1176,6 +1269,10 @@ body.is-ready .cine-in {
 
 .pricing-option .price-desc {
   margin-bottom: 0;
+}
+
+.price-option-amounts {
+  text-align: right;
 }
 
 .pricing-note {
