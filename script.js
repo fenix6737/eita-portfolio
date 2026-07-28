@@ -8,7 +8,6 @@
   const timecodeEl = document.getElementById("hudTimecode");
   const canvas = document.getElementById("spaceCanvas");
 
-  /* ---------- Mobile nav ---------- */
   const setMenuOpen = (open) => {
     if (!menuToggle || !mobileNav) return;
     menuToggle.setAttribute("aria-expanded", String(open));
@@ -28,7 +27,6 @@
     });
   }
 
-  /* ---------- Smooth anchors ---------- */
   document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
     anchor.addEventListener("click", (event) => {
       const id = anchor.getAttribute("href");
@@ -41,13 +39,11 @@
     });
   });
 
-  /* ---------- Intro ---------- */
   requestAnimationFrame(() => {
     document.body.classList.remove("is-loading");
     document.body.classList.add("is-ready");
   });
 
-  /* ---------- HUD timecode ---------- */
   const pad = (n, len = 2) => String(n).padStart(len, "0");
   const tickTimecode = () => {
     if (!timecodeEl) return;
@@ -58,7 +54,6 @@
   tickTimecode();
   if (!reduceMotion) setInterval(tickTimecode, 100);
 
-  /* ---------- Soft pointer parallax ---------- */
   let targetMX = 0;
   let targetMY = 0;
   let curMX = 0;
@@ -74,38 +69,6 @@
     { passive: true }
   );
 
-  /* ---------- Scroll reveal (reliable visibility) ---------- */
-  const reveals = Array.from(document.querySelectorAll(".reveal"));
-
-  const showReveal = (el) => el.classList.add("is-visible");
-
-  if (reduceMotion) {
-    reveals.forEach(showReveal);
-  } else if ("IntersectionObserver" in window) {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            showReveal(entry.target);
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.05, rootMargin: "0px 0px -8% 0px" }
-    );
-    reveals.forEach((el) => observer.observe(el));
-
-    // Safety: never leave cards invisible
-    window.setTimeout(() => {
-      reveals.forEach((el) => {
-        if (!el.classList.contains("is-visible")) showReveal(el);
-      });
-    }, 2500);
-  } else {
-    reveals.forEach(showReveal);
-  }
-
-  /* ---------- Starfield ---------- */
   const initCanvas = () => {
     if (!canvas || reduceMotion) {
       if (canvas) canvas.style.display = "none";
@@ -116,7 +79,6 @@
     let w = 0;
     let h = 0;
     let particles = [];
-    let raf = 0;
 
     const resize = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -163,7 +125,7 @@
         ctx.fill();
       }
 
-      raf = requestAnimationFrame(draw);
+      requestAnimationFrame(draw);
     };
 
     resize();
@@ -173,7 +135,6 @@
 
   initCanvas();
 
-  /* ---------- RAF: smooth parallax lerp ---------- */
   const tick = () => {
     curMX += (targetMX - curMX) * 0.045;
     curMY += (targetMY - curMY) * 0.045;
