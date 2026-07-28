@@ -259,10 +259,15 @@ strong {
   top: 0;
   width: min(28vw, 300px);
   will-change: transform;
-  opacity: 0.7;
+  opacity: 0;
   filter: drop-shadow(0 12px 28px rgba(124, 92, 255, 0.35));
   transform: translate3d(50%, 45%, 0) translate(-50%, -50%);
   transform-origin: center center;
+  transition: opacity 1.6s var(--ease-cine);
+}
+
+.whale.is-alive {
+  opacity: 0.68;
 }
 
 .whale-svg {

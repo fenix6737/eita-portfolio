@@ -324,7 +324,7 @@
 
   initParticleField();
 
-  /* Whale: stays on-screen, seeks waypoints with capped turn rate (no flip snaps) */
+  /* Cinematic whale: continuous forward swim on a soft orbital path (never pivots in place) */
   const initWhale = () => {
     const whale = document.getElementById("whale");
     const body = document.getElementById("whaleBody");
@@ -359,25 +359,20 @@
     const wrapAngle = (a) => ((a + Math.PI) % TAU + TAU) % TAU - Math.PI;
     const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
-    let w = window.innerWidth;
-    let h = window.innerHeight;
+    let w = 0;
+    let h = 0;
     let whaleW = 0;
     let whaleH = 0;
 
-    // Center of whale
-    let cx = w * 0.5;
-    let cy = h * 0.45;
-    let heading = 0; // 0 = swim right
-    let speed = 0.14;
+    // Orbit phase — whale is always mid-swim on this path
+    let orbit = Math.random() * TAU;
+    let heading = 0;
+    let cx = 0;
+    let cy = 0;
     let phase = Math.random() * TAU;
-    let goalX = cx + w * 0.2;
-    let goalY = cy;
+    let t = 0;
     let last = performance.now();
-
-    // ~40°/s max — slow deliberate arcs, no flutter
-    const MAX_TURN = 0.7;
-    const CRUISE = 0.15;
-    const ARRIVE = 70;
+    let ready = false;
 
     const measure = () => {
       w = window.innerWidth;
@@ -386,192 +381,127 @@
       whaleH = whaleW * (240 / 640);
     };
 
-    // Rotated AABB half-size so the whole silhouette stays inside
-    const halfExtents = (angle) => {
-      const c = Math.abs(Math.cos(angle));
-      const s = Math.abs(Math.sin(angle));
-      // Extra pad for glow / wake
-      const pad = 18;
+    const orbitPad = () => {
+      // Conservative pad for any heading (full diagonal)
+      const pad = Math.hypot(whaleW, whaleH) * 0.52 + 20;
       return {
-        hx: (whaleW * 0.5) * c + (whaleH * 0.5) * s + pad,
-        hy: (whaleW * 0.5) * s + (whaleH * 0.5) * c + pad,
+        midX: w * 0.5,
+        midY: h * 0.48,
+        ax: Math.max(40, w * 0.5 - pad),
+        ay: Math.max(30, h * 0.5 - pad - 36),
       };
     };
 
-    const safeRect = (angle) => {
-      const { hx, hy } = halfExtents(angle);
-      const topPad = 64; // header
-      return {
-        minX: hx,
-        maxX: w - hx,
-        minY: hy + topPad,
-        maxY: h - hy,
-      };
+    // Soft cinematic circuit: elongated ellipse with gentle breathing (no cusps)
+    const samplePath = (theta, time) => {
+      const { midX, midY, ax, ay } = orbitPad();
+      const breathe = 1 + 0.035 * Math.sin(time * 0.22);
+      const drift = 0.03 * Math.sin(time * 0.11);
+      const x = midX + ax * breathe * Math.cos(theta);
+      const y = midY + ay * breathe * Math.sin(theta + drift);
+      return { x, y };
     };
 
-    const clampToSafe = (x, y, angle) => {
-      const r = safeRect(angle);
-      // Degenerate on tiny screens
-      if (r.maxX < r.minX || r.maxY < r.minY) {
-        return { x: w * 0.5, y: h * 0.5 };
-      }
-      return {
-        x: clamp(x, r.minX, r.maxX),
-        y: clamp(y, r.minY, r.maxY),
-      };
+    const samplePose = (theta, time) => {
+      const p0 = samplePath(theta, time);
+      // Forward difference → always face travel direction
+      const p1 = samplePath(theta + 0.02, time);
+      const dx = p1.x - p0.x;
+      const dy = p1.y - p0.y;
+      const ang = Math.atan2(dy, dx);
+      return { x: p0.x, y: p0.y, ang };
     };
 
-    const pickGoal = () => {
-      const r = safeRect(heading);
-      if (r.maxX < r.minX || r.maxY < r.minY) {
-        goalX = w * 0.5;
-        goalY = h * 0.5;
-        return;
+    const applyPose = (pose, swimPhase, turnLean) => {
+      cx = pose.x;
+      cy = pose.y;
+      heading = pose.ang;
+
+      const amp = 0.55;
+      const s = Math.sin(swimPhase);
+      const s2 = Math.sin(swimPhase - 0.6);
+      const s3 = Math.sin(swimPhase - 1.15);
+
+      // Side-view whale: fluke beat = vertical undulation in silhouette plane
+      setRot(body, s2 * 3.2 * amp + turnLean * 0.35, P.body);
+      setRot(head, -s * 2.8 * amp, P.head);
+      setRot(fin, Math.sin(swimPhase * 0.85 + 0.9) * 10 * amp, P.fin);
+      setRot(peduncle, s3 * 9 * amp, P.peduncle);
+      setRot(fluke, Math.sin(swimPhase - 1.5) * 16 * amp, P.fluke);
+
+      if (wake) {
+        const kick = 0.5 + s * 0.5;
+        wake.style.opacity = String(0.14 + kick * 0.22);
+        wake.style.transform = `translateY(-50%) scaleX(${0.55 + kick * 0.4})`;
       }
 
-      let bestX = goalX;
-      let bestY = goalY;
-      let bestScore = -Infinity;
-
-      // Prefer distant goals that need a clear arc turn
-      for (let i = 0; i < 14; i += 1) {
-        const x = r.minX + Math.random() * (r.maxX - r.minX);
-        const y = r.minY + Math.random() * (r.maxY - r.minY);
-        const dx = x - cx;
-        const dy = y - cy;
-        const dist = Math.hypot(dx, dy);
-        if (dist < Math.min(w, h) * 0.28) continue;
-
-        const absTurn = Math.abs(wrapAngle(Math.atan2(dy, dx) - heading));
-        // Reward 50°–150° turns (visible くるり), penalize tiny wiggles & 180° snaps
-        const turnScore = absTurn > 0.7 && absTurn < 2.5 ? absTurn : absTurn * 0.25;
-        const score = dist * 0.01 + turnScore * 40 + Math.random() * 5;
-        if (score > bestScore) {
-          bestScore = score;
-          bestX = x;
-          bestY = y;
-        }
+      if (bubbles) {
+        const burst = Math.max(0, s);
+        bubbles.style.opacity = String(0.05 + burst * 0.28);
+        bubbles.style.transform = `translate(${-burst * 5}px, ${-burst * 7}px)`;
       }
 
-      goalX = bestX;
-      goalY = bestY;
+      const visualDeg = ((heading + ART_NOSE) * 180) / Math.PI;
+      whale.style.transform = `translate3d(${cx.toFixed(2)}px, ${cy.toFixed(2)}px, 0) translate(-50%, -50%) rotate(${visualDeg.toFixed(2)}deg)`;
     };
 
     const swim = (now) => {
       const dt = Math.min(0.033, (now - last) / 1000);
       last = now;
+      t += dt;
 
-      let dx = goalX - cx;
-      let dy = goalY - cy;
-      let dist = Math.hypot(dx, dy);
+      // Slow cruise around the circuit (~one lap / ~45–55s)
+      const orbitSpeed = 0.12 + 0.025 * Math.sin(t * 0.15);
+      const prev = samplePose(orbit, t);
+      orbit += orbitSpeed * dt;
+      const pose = samplePose(orbit, t);
 
-      if (dist < ARRIVE) {
-        pickGoal();
-        dx = goalX - cx;
-        dy = goalY - cy;
-        dist = Math.hypot(dx, dy) || 1;
+      // Tiny heading ease so silhouette doesn't micro-jitter — still forward-biased
+      const turnErr = wrapAngle(pose.ang - heading);
+      const easedAng = heading + turnErr * (1 - Math.pow(0.86, dt * 60));
+      const lean = clamp(turnErr * 10, -5, 5);
+
+      // Swim cycle locked to travel (power stroke feel)
+      const dist = Math.hypot(pose.x - prev.x, pose.y - prev.y);
+      phase += dt * (1.05 + dist * 2.2);
+
+      applyPose({ x: pose.x, y: pose.y, ang: easedAng }, phase, lean);
+
+      if (!ready) {
+        ready = true;
+        whale.classList.add("is-alive");
       }
-
-      // Desired heading toward goal
-      let desired = Math.atan2(dy, dx);
-
-      // Soft wall bias: if close to edge, blend desired toward inward (not snap)
-      const r = safeRect(heading);
-      const edge = Math.min(w, h) * 0.16;
-      let inwardX = 0;
-      let inwardY = 0;
-      if (cx < r.minX + edge) inwardX += (r.minX + edge - cx) / edge;
-      if (cx > r.maxX - edge) inwardX -= (cx - (r.maxX - edge)) / edge;
-      if (cy < r.minY + edge) inwardY += (r.minY + edge - cy) / edge;
-      if (cy > r.maxY - edge) inwardY -= (cy - (r.maxY - edge)) / edge;
-      const inwardMag = Math.hypot(inwardX, inwardY);
-      if (inwardMag > 0.05) {
-        const inwardAng = Math.atan2(inwardY, inwardX);
-        const blend = clamp(inwardMag, 0, 1) * 0.85;
-        // Slerp-ish on angle
-        desired = desired + wrapAngle(inwardAng - desired) * blend;
-      }
-
-      // Caps turn rate — continuous arc only
-      const err = wrapAngle(desired - heading);
-      const maxStep = MAX_TURN * dt;
-      const step = clamp(err, -maxStep, maxStep);
-      heading += step;
-
-      // Slow in tight turns; never reverse in place
-      const turnMag = Math.min(1, Math.abs(err) / 1.1);
-      const desiredSpeed = CRUISE * (0.45 + 0.55 * (1 - turnMag * 0.7));
-      speed += (desiredSpeed - speed) * (1 - Math.pow(0.9, dt * 60));
-
-      cx += Math.cos(heading) * speed * (dt * 60);
-      cy += Math.sin(heading) * speed * (dt * 60);
-
-      const clamped = clampToSafe(cx, cy, heading);
-      cx = clamped.x;
-      cy = clamped.y;
-
-      // If goal ended up outside (resize) or we're stuck hugging a wall, re-pick
-      const gr = safeRect(heading);
-      if (
-        goalX < gr.minX ||
-        goalX > gr.maxX ||
-        goalY < gr.minY ||
-        goalY > gr.maxY ||
-        (inwardMag > 0.9 && dist < ARRIVE * 1.5)
-      ) {
-        pickGoal();
-      }
-
-      // Gentle body undulation (no bank flutter)
-      phase += dt * (1.15 + speed * 1.4);
-      const amp = 0.6 + speed * 0.8;
-      const s = Math.sin(phase);
-      const s2 = Math.sin(phase - 0.55);
-      const s3 = Math.sin(phase - 1.1);
-      const lean = clamp(-step / (maxStep || 0.001), -1, 1) * 4;
-
-      setRot(body, s2 * 4.5 * amp + lean, P.body);
-      setRot(head, -s * 4 * amp, P.head);
-      setRot(fin, Math.sin(phase * 0.9 + 1.2) * 12 * amp, P.fin);
-      setRot(peduncle, s3 * 12 * amp, P.peduncle);
-      setRot(fluke, Math.sin(phase - 1.45) * 20 * amp, P.fluke);
-
-      if (wake) {
-        const wakeScale = 0.6 + (0.5 + s * 0.5) * 0.45;
-        wake.style.opacity = String(0.16 + (0.5 + s * 0.5) * 0.28);
-        wake.style.transform = `translateY(-50%) scaleX(${wakeScale})`;
-      }
-
-      if (bubbles) {
-        const burst = Math.max(0, s);
-        bubbles.style.opacity = String(0.06 + burst * 0.35);
-        bubbles.style.transform = `translate(${-burst * 6}px, ${-burst * 8}px)`;
-      }
-
-      const visualDeg = ((heading + ART_NOSE) * 180) / Math.PI;
-      whale.style.transform = `translate3d(${cx.toFixed(2)}px, ${cy.toFixed(2)}px, 0) translate(-50%, -50%) rotate(${visualDeg.toFixed(2)}deg)`;
 
       requestAnimationFrame(swim);
     };
 
     measure();
-    const start = clampToSafe(cx, cy, heading);
-    cx = start.x;
-    cy = start.y;
-    pickGoal();
+    // First paint already mid-swim & correctly oriented (no spin-up)
+    const boot = samplePose(orbit, 0);
+    heading = boot.ang;
+    applyPose(boot, phase, 0);
 
     window.addEventListener(
       "resize",
       () => {
         measure();
-        const c = clampToSafe(cx, cy, heading);
-        cx = c.x;
-        cy = c.y;
-        pickGoal();
+        const pose = samplePose(orbit, t);
+        heading = pose.ang;
+        applyPose(pose, phase, 0);
       },
       { passive: true }
     );
-    requestAnimationFrame(swim);
+
+    // Fade in on next frame so layout size is correct
+    requestAnimationFrame(() => {
+      measure();
+      const pose = samplePose(orbit, t);
+      heading = pose.ang;
+      applyPose(pose, phase, 0);
+      whale.classList.add("is-alive");
+      last = performance.now();
+      requestAnimationFrame(swim);
+    });
   };
 
   initWhale();
