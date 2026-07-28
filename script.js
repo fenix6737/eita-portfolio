@@ -339,17 +339,26 @@
 
     let w = window.innerWidth;
     let h = window.innerHeight;
-    let x = w * 0.15;
-    let y = h * 0.42;
-    let vx = 0.85;
-    let vy = 0.08;
+    let x = w * 0.2;
+    let y = h * 0.45;
+    // Heading-based swim (no sudden vx flips)
+    let heading = 0; // 0 = right
+    let targetHeading = 0;
+    let speed = 0.28;
     let t = 0;
     let phase = Math.random() * Math.PI * 2;
-    let nextTurn = 180 + Math.random() * 220;
-    let frames = 0;
+    let nextSteer = 8 + Math.random() * 10; // seconds
     let pitch = 0;
     let bank = 0;
+    let facingLeft = false;
     let last = performance.now();
+
+    const TAU = Math.PI * 2;
+    const wrapAngle = (a) => {
+      a = ((a + Math.PI) % TAU + TAU) % TAU - Math.PI;
+      return a;
+    };
+    const lerpAngle = (from, to, k) => from + wrapAngle(to - from) * k;
 
     const resize = () => {
       w = window.innerWidth;
@@ -359,95 +368,85 @@
     const swim = (now) => {
       const dt = Math.min(0.033, (now - last) / 1000);
       last = now;
-      frames += 1;
       t += dt;
 
-      // Path drift
-      vx += (Math.sin(t * 0.33) * 0.22 + Math.sin(t * 0.09) * 0.35) * dt * 8;
-      vy += (Math.sin(t * 0.41) * 0.45 + Math.cos(t * 0.17) * 0.3) * dt * 10;
-
-      if (frames >= nextTurn) {
-        if (Math.random() > 0.55) vx *= -1;
-        else {
-          vx += (Math.random() - 0.5) * 1.2;
-          vy += (Math.random() - 0.5) * 0.85;
-        }
-        nextTurn = frames + 120 + Math.random() * 320;
+      // Soft path wander — gentle course changes only
+      nextSteer -= dt;
+      if (nextSteer <= 0) {
+        targetHeading += (Math.random() - 0.5) * 0.7; // ~±40°
+        nextSteer = 10 + Math.random() * 14;
       }
 
-      // Tail thrust: surge forward on downstroke
-      const speed = Math.hypot(vx, vy) || 0.001;
-      const cruise = 0.7 + Math.abs(Math.sin(t * 0.07)) * 0.55;
-      const thrustBoost = 0.2 + Math.max(0, Math.sin(phase)) * 0.55;
-      const target = cruise + thrustBoost;
-      const scale = target / speed;
-      vx *= 0.88 + 0.12 * scale;
-      vy *= 0.88 + 0.12 * scale;
+      // Edge avoidance: ease toward opposite direction (no teleport flip)
+      const marginX = Math.min(w * 0.62, 680) * 0.2;
+      const minY = h * 0.18;
+      const maxY = h * 0.68;
+      if (x < marginX) targetHeading = lerpAngle(targetHeading, 0, 0.04);
+      else if (x > w - marginX) targetHeading = lerpAngle(targetHeading, Math.PI, 0.04);
+      if (y < minY) targetHeading = lerpAngle(targetHeading, Math.PI * 0.5, 0.035);
+      else if (y > maxY) targetHeading = lerpAngle(targetHeading, -Math.PI * 0.5, 0.035);
 
-      // Extra kick synced to fluke beat
-      const kick = Math.max(0, Math.sin(phase)) * 0.35;
-      const dir = vx >= 0 ? 1 : -1;
-      x += (vx + dir * kick) * (dt * 60);
+      // Slow turn rate (~25°/s max feel)
+      heading = lerpAngle(heading, targetHeading, 1 - Math.pow(0.92, dt * 60));
+
+      // Calm cruise + light tail thrust
+      const cruise = 0.22 + Math.abs(Math.sin(t * 0.05)) * 0.08;
+      const thrust = Math.max(0, Math.sin(phase)) * 0.06;
+      speed += (cruise + thrust - speed) * 0.04;
+
+      const vx = Math.cos(heading) * speed;
+      const vy = Math.sin(heading) * speed * 0.55;
+      x += vx * (dt * 60);
       y += vy * (dt * 60);
 
-      const minY = h * 0.14;
-      const maxY = h * 0.72;
-      if (y < minY) {
-        y = minY;
-        vy = Math.abs(vy) * 0.65;
-      } else if (y > maxY) {
-        y = maxY;
-        vy = -Math.abs(vy) * 0.65;
-      }
+      y = Math.max(minY, Math.min(maxY, y));
 
+      // Soft wrap only when fully off-screen
       const whaleW = Math.min(w * 0.62, 680);
-      if (x > w + whaleW * 0.25) {
-        x = -whaleW * 0.25;
-        y = h * (0.26 + Math.random() * 0.34);
-      } else if (x < -whaleW * 0.3) {
-        x = w + whaleW * 0.2;
-        y = h * (0.26 + Math.random() * 0.34);
-      }
+      if (x > w + whaleW * 0.35) x = -whaleW * 0.25;
+      else if (x < -whaleW * 0.35) x = w + whaleW * 0.2;
 
-      const facingLeft = vx < 0;
+      // Flip facing with hysteresis so it doesn't twitch
+      const hx = Math.cos(heading);
+      if (!facingLeft && hx < -0.25) facingLeft = true;
+      else if (facingLeft && hx > 0.25) facingLeft = false;
       whale.classList.toggle("is-flipped", facingLeft);
 
-      // Strong swim cycle — beat rate follows speed
-      const spd = Math.hypot(vx, vy);
-      phase += dt * (3.2 + spd * 3.4);
-      const amp = 1 + Math.min(0.7, spd * 0.5);
+      // Slow swim cycle
+      phase += dt * (1.35 + speed * 1.8);
+      const amp = 0.7 + Math.min(0.35, speed * 0.8);
       const s = Math.sin(phase);
       const s2 = Math.sin(phase - 0.55);
       const s3 = Math.sin(phase - 1.1);
 
-      // Cascading undulation (head → body → peduncle → fluke)
-      const headDeg = -s * 7 * amp;
-      const bodyDeg = s2 * 8 * amp;
-      const peduncleDeg = s3 * 22 * amp;
-      const flukeDeg = Math.sin(phase - 1.45) * 38 * amp;
-      const finDeg = Math.sin(phase * 0.95 + 1.2) * 28 * amp;
+      const headDeg = -s * 5 * amp;
+      const bodyDeg = s2 * 5.5 * amp;
+      const peduncleDeg = s3 * 14 * amp;
+      const flukeDeg = Math.sin(phase - 1.45) * 24 * amp;
+      const finDeg = Math.sin(phase * 0.9 + 1.2) * 16 * amp;
 
-      const desiredPitch = Math.max(-14, Math.min(14, (vy / (Math.abs(vx) + 0.2)) * 12));
-      const desiredBank = Math.max(-10, Math.min(10, -vy * 5));
-      pitch += (desiredPitch - pitch) * 0.08;
-      bank += (desiredBank - bank) * 0.06;
+      const desiredPitch = Math.max(-8, Math.min(8, Math.sin(heading) * 8));
+      const turnRate = wrapAngle(targetHeading - heading);
+      const desiredBank = Math.max(-6, Math.min(6, -turnRate * 18));
+      pitch += (desiredPitch - pitch) * 0.04;
+      bank += (desiredBank - bank) * 0.035;
 
-      setRot(body, bodyDeg + pitch * 0.4, P.body);
+      setRot(body, bodyDeg + pitch * 0.35, P.body);
       setRot(head, headDeg, P.head);
       setRot(fin, finDeg, P.fin);
       setRot(peduncle, peduncleDeg, P.peduncle);
       setRot(fluke, flukeDeg, P.fluke);
 
       if (wake) {
-        const wakeScale = 0.85 + (0.5 + s * 0.5) * 0.9;
-        wake.style.opacity = String(0.28 + (0.5 + s * 0.5) * 0.5);
+        const wakeScale = 0.7 + (0.5 + s * 0.5) * 0.55;
+        wake.style.opacity = String(0.2 + (0.5 + s * 0.5) * 0.35);
         wake.style.transform = `translateY(-50%) scaleX(${wakeScale})`;
       }
 
       if (bubbles) {
         const burst = Math.max(0, s);
-        bubbles.style.opacity = String(0.15 + burst * 0.65);
-        bubbles.style.transform = `translate(${facingLeft ? -burst * 14 : burst * 14}px, ${-burst * 18}px)`;
+        bubbles.style.opacity = String(0.1 + burst * 0.45);
+        bubbles.style.transform = `translate(${facingLeft ? -burst * 10 : burst * 10}px, ${-burst * 12}px)`;
       }
 
       const depthParallax = curMX * -18;
