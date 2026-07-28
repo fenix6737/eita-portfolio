@@ -324,7 +324,7 @@
 
   initParticleField();
 
-  /* Articulated swimming whale — floats inside viewport, turns by rotation */
+  /* Whale: stays on-screen, seeks waypoints with capped turn rate (no flip snaps) */
   const initWhale = () => {
     const whale = document.getElementById("whale");
     const body = document.getElementById("whaleBody");
@@ -355,142 +355,219 @@
     };
 
     const TAU = Math.PI * 2;
-    const ART_NOSE = Math.PI; // SVG faces left
+    const ART_NOSE = Math.PI; // SVG nose points left
     const wrapAngle = (a) => ((a + Math.PI) % TAU + TAU) % TAU - Math.PI;
-    const lerpAngle = (from, to, k) => from + wrapAngle(to - from) * k;
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
     let w = window.innerWidth;
     let h = window.innerHeight;
     let whaleW = 0;
     let whaleH = 0;
-    let margin = 24;
-    let cx = w * 0.35;
-    let cy = h * 0.48;
-    let heading = 0;
-    let targetHeading = 0;
-    let speed = 0.2;
-    let t = 0;
-    let phase = Math.random() * Math.PI * 2;
-    let nextSteer = 6 + Math.random() * 8;
-    let bank = 0;
+
+    // Center of whale
+    let cx = w * 0.5;
+    let cy = h * 0.45;
+    let heading = 0; // 0 = swim right
+    let speed = 0.14;
+    let phase = Math.random() * TAU;
+    let goalX = cx + w * 0.2;
+    let goalY = cy;
     let last = performance.now();
+
+    // ~40°/s max — slow deliberate arcs, no flutter
+    const MAX_TURN = 0.7;
+    const CRUISE = 0.15;
+    const ARRIVE = 70;
 
     const measure = () => {
       w = window.innerWidth;
       h = window.innerHeight;
-      whaleW = whale.offsetWidth || Math.min(w * 0.38, 420);
+      whaleW = whale.offsetWidth || Math.min(w * 0.28, 300);
       whaleH = whaleW * (240 / 640);
-      margin = Math.max(16, Math.min(36, w * 0.03));
     };
 
-    const bounds = () => {
-      // Use diagonal radius so rotated whale still stays fully inside
-      const radius = Math.hypot(whaleW, whaleH) * 0.42;
+    // Rotated AABB half-size so the whole silhouette stays inside
+    const halfExtents = (angle) => {
+      const c = Math.abs(Math.cos(angle));
+      const s = Math.abs(Math.sin(angle));
+      // Extra pad for glow / wake
+      const pad = 18;
       return {
-        minX: margin + radius,
-        maxX: w - margin - radius,
-        minY: margin + radius + 48,
-        maxY: h - margin - radius,
+        hx: (whaleW * 0.5) * c + (whaleH * 0.5) * s + pad,
+        hy: (whaleW * 0.5) * s + (whaleH * 0.5) * c + pad,
       };
     };
 
-    const steerAwayFromEdges = () => {
-      const b = bounds();
-      const soft = Math.min(w, h) * 0.18;
-      let pullX = 0;
-      let pullY = 0;
+    const safeRect = (angle) => {
+      const { hx, hy } = halfExtents(angle);
+      const topPad = 64; // header
+      return {
+        minX: hx,
+        maxX: w - hx,
+        minY: hy + topPad,
+        maxY: h - hy,
+      };
+    };
 
-      if (cx < b.minX + soft) pullX += (b.minX + soft - cx) / soft;
-      if (cx > b.maxX - soft) pullX -= (cx - (b.maxX - soft)) / soft;
-      if (cy < b.minY + soft) pullY += (b.minY + soft - cy) / soft;
-      if (cy > b.maxY - soft) pullY -= (cy - (b.maxY - soft)) / soft;
-
-      if (pullX !== 0 || pullY !== 0) {
-        targetHeading = Math.atan2(pullY, pullX);
+    const clampToSafe = (x, y, angle) => {
+      const r = safeRect(angle);
+      // Degenerate on tiny screens
+      if (r.maxX < r.minX || r.maxY < r.minY) {
+        return { x: w * 0.5, y: h * 0.5 };
       }
+      return {
+        x: clamp(x, r.minX, r.maxX),
+        y: clamp(y, r.minY, r.maxY),
+      };
+    };
+
+    const pickGoal = () => {
+      const r = safeRect(heading);
+      if (r.maxX < r.minX || r.maxY < r.minY) {
+        goalX = w * 0.5;
+        goalY = h * 0.5;
+        return;
+      }
+
+      let bestX = goalX;
+      let bestY = goalY;
+      let bestScore = -Infinity;
+
+      // Prefer distant goals that need a clear arc turn
+      for (let i = 0; i < 14; i += 1) {
+        const x = r.minX + Math.random() * (r.maxX - r.minX);
+        const y = r.minY + Math.random() * (r.maxY - r.minY);
+        const dx = x - cx;
+        const dy = y - cy;
+        const dist = Math.hypot(dx, dy);
+        if (dist < Math.min(w, h) * 0.28) continue;
+
+        const absTurn = Math.abs(wrapAngle(Math.atan2(dy, dx) - heading));
+        // Reward 50°–150° turns (visible くるり), penalize tiny wiggles & 180° snaps
+        const turnScore = absTurn > 0.7 && absTurn < 2.5 ? absTurn : absTurn * 0.25;
+        const score = dist * 0.01 + turnScore * 40 + Math.random() * 5;
+        if (score > bestScore) {
+          bestScore = score;
+          bestX = x;
+          bestY = y;
+        }
+      }
+
+      goalX = bestX;
+      goalY = bestY;
     };
 
     const swim = (now) => {
       const dt = Math.min(0.033, (now - last) / 1000);
       last = now;
-      t += dt;
 
-      nextSteer -= dt;
-      if (nextSteer <= 0) {
-        const bigTurn = Math.random() > 0.72;
-        targetHeading += bigTurn
-          ? (Math.random() > 0.5 ? 1 : -1) * (1.2 + Math.random() * 1.4)
-          : (Math.random() - 0.5) * 0.9;
-        nextSteer = 7 + Math.random() * 11;
+      let dx = goalX - cx;
+      let dy = goalY - cy;
+      let dist = Math.hypot(dx, dy);
+
+      if (dist < ARRIVE) {
+        pickGoal();
+        dx = goalX - cx;
+        dy = goalY - cy;
+        dist = Math.hypot(dx, dy) || 1;
       }
 
-      steerAwayFromEdges();
+      // Desired heading toward goal
+      let desired = Math.atan2(dy, dx);
 
-      const turnErr = wrapAngle(targetHeading - heading);
-      const turnK = 1 - Math.pow(0.965, dt * 60);
-      heading = lerpAngle(heading, targetHeading, turnK);
+      // Soft wall bias: if close to edge, blend desired toward inward (not snap)
+      const r = safeRect(heading);
+      const edge = Math.min(w, h) * 0.16;
+      let inwardX = 0;
+      let inwardY = 0;
+      if (cx < r.minX + edge) inwardX += (r.minX + edge - cx) / edge;
+      if (cx > r.maxX - edge) inwardX -= (cx - (r.maxX - edge)) / edge;
+      if (cy < r.minY + edge) inwardY += (r.minY + edge - cy) / edge;
+      if (cy > r.maxY - edge) inwardY -= (cy - (r.maxY - edge)) / edge;
+      const inwardMag = Math.hypot(inwardX, inwardY);
+      if (inwardMag > 0.05) {
+        const inwardAng = Math.atan2(inwardY, inwardX);
+        const blend = clamp(inwardMag, 0, 1) * 0.85;
+        // Slerp-ish on angle
+        desired = desired + wrapAngle(inwardAng - desired) * blend;
+      }
 
-      const turnMag = Math.min(1, Math.abs(turnErr) / 1.2);
-      const cruise = 0.16 + Math.abs(Math.sin(t * 0.045)) * 0.06;
-      const thrust = Math.max(0, Math.sin(phase)) * 0.045;
-      const desiredSpeed = (cruise + thrust) * (1 - turnMag * 0.55);
-      speed += (desiredSpeed - speed) * 0.05;
+      // Caps turn rate — continuous arc only
+      const err = wrapAngle(desired - heading);
+      const maxStep = MAX_TURN * dt;
+      const step = clamp(err, -maxStep, maxStep);
+      heading += step;
+
+      // Slow in tight turns; never reverse in place
+      const turnMag = Math.min(1, Math.abs(err) / 1.1);
+      const desiredSpeed = CRUISE * (0.45 + 0.55 * (1 - turnMag * 0.7));
+      speed += (desiredSpeed - speed) * (1 - Math.pow(0.9, dt * 60));
 
       cx += Math.cos(heading) * speed * (dt * 60);
-      cy += Math.sin(heading) * speed * (dt * 60) * 0.85;
+      cy += Math.sin(heading) * speed * (dt * 60);
 
-      const b = bounds();
-      cx = Math.max(b.minX, Math.min(b.maxX, cx));
-      cy = Math.max(b.minY, Math.min(b.maxY, cy));
+      const clamped = clampToSafe(cx, cy, heading);
+      cx = clamped.x;
+      cy = clamped.y;
 
-      const desiredBank = Math.max(-22, Math.min(22, -turnErr * 28));
-      bank += (desiredBank - bank) * 0.06;
+      // If goal ended up outside (resize) or we're stuck hugging a wall, re-pick
+      const gr = safeRect(heading);
+      if (
+        goalX < gr.minX ||
+        goalX > gr.maxX ||
+        goalY < gr.minY ||
+        goalY > gr.maxY ||
+        (inwardMag > 0.9 && dist < ARRIVE * 1.5)
+      ) {
+        pickGoal();
+      }
 
-      phase += dt * (1.2 + speed * 1.6);
-      const amp = 0.65 + Math.min(0.3, speed);
+      // Gentle body undulation (no bank flutter)
+      phase += dt * (1.15 + speed * 1.4);
+      const amp = 0.6 + speed * 0.8;
       const s = Math.sin(phase);
       const s2 = Math.sin(phase - 0.55);
       const s3 = Math.sin(phase - 1.1);
+      const lean = clamp(-step / (maxStep || 0.001), -1, 1) * 4;
 
-      setRot(body, s2 * 5 * amp + bank * 0.15, P.body);
-      setRot(head, -s * 4.5 * amp, P.head);
-      setRot(fin, Math.sin(phase * 0.9 + 1.2) * 14 * amp, P.fin);
-      setRot(peduncle, s3 * 13 * amp, P.peduncle);
-      setRot(fluke, Math.sin(phase - 1.45) * 22 * amp, P.fluke);
+      setRot(body, s2 * 4.5 * amp + lean, P.body);
+      setRot(head, -s * 4 * amp, P.head);
+      setRot(fin, Math.sin(phase * 0.9 + 1.2) * 12 * amp, P.fin);
+      setRot(peduncle, s3 * 12 * amp, P.peduncle);
+      setRot(fluke, Math.sin(phase - 1.45) * 20 * amp, P.fluke);
 
       if (wake) {
-        const wakeScale = 0.65 + (0.5 + s * 0.5) * 0.5;
-        wake.style.opacity = String(0.18 + (0.5 + s * 0.5) * 0.32);
+        const wakeScale = 0.6 + (0.5 + s * 0.5) * 0.45;
+        wake.style.opacity = String(0.16 + (0.5 + s * 0.5) * 0.28);
         wake.style.transform = `translateY(-50%) scaleX(${wakeScale})`;
       }
 
       if (bubbles) {
         const burst = Math.max(0, s);
-        bubbles.style.opacity = String(0.08 + burst * 0.4);
-        bubbles.style.transform = `translate(${-burst * 8}px, ${-burst * 10}px)`;
+        bubbles.style.opacity = String(0.06 + burst * 0.35);
+        bubbles.style.transform = `translate(${-burst * 6}px, ${-burst * 8}px)`;
       }
 
       const visualDeg = ((heading + ART_NOSE) * 180) / Math.PI;
-      const depthX = curMX * -8;
-      const depthY = curMY * -5;
-      const b2 = bounds();
-      const drawX = Math.max(b2.minX, Math.min(b2.maxX, cx + depthX));
-      const drawY = Math.max(b2.minY, Math.min(b2.maxY, cy + depthY));
-      whale.style.transform = `translate3d(${drawX.toFixed(2)}px, ${drawY.toFixed(2)}px, 0) translate(-50%, -50%) rotate(${visualDeg.toFixed(2)}deg)`;
+      whale.style.transform = `translate3d(${cx.toFixed(2)}px, ${cy.toFixed(2)}px, 0) translate(-50%, -50%) rotate(${visualDeg.toFixed(2)}deg)`;
 
       requestAnimationFrame(swim);
     };
 
     measure();
-    heading = 0;
-    targetHeading = 0;
+    const start = clampToSafe(cx, cy, heading);
+    cx = start.x;
+    cy = start.y;
+    pickGoal();
+
     window.addEventListener(
       "resize",
       () => {
         measure();
-        const b = bounds();
-        cx = Math.max(b.minX, Math.min(b.maxX, cx));
-        cy = Math.max(b.minY, Math.min(b.maxY, cy));
+        const c = clampToSafe(cx, cy, heading);
+        cx = c.x;
+        cy = c.y;
+        pickGoal();
       },
       { passive: true }
     );
