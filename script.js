@@ -41,7 +41,7 @@
     });
   });
 
-  /* ---------- Cinematic intro ---------- */
+  /* ---------- Intro ---------- */
   requestAnimationFrame(() => {
     document.body.classList.remove("is-loading");
     document.body.classList.add("is-ready");
@@ -56,74 +56,60 @@
     timecodeEl.textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}:${pad(frames)}`;
   };
   tickTimecode();
-  setInterval(tickTimecode, 42);
+  if (!reduceMotion) setInterval(tickTimecode, 100);
 
-  /* ---------- Pointer parallax / depth ---------- */
+  /* ---------- Soft pointer parallax ---------- */
   let targetMX = 0;
   let targetMY = 0;
   let curMX = 0;
   let curMY = 0;
 
-  const setPointer = (clientX, clientY) => {
-    targetMX = (clientX / window.innerWidth) * 2 - 1;
-    targetMY = (clientY / window.innerHeight) * 2 - 1;
-  };
-
   window.addEventListener(
     "pointermove",
     (e) => {
       if (reduceMotion) return;
-      setPointer(e.clientX, e.clientY);
+      targetMX = (e.clientX / window.innerWidth) * 2 - 1;
+      targetMY = (e.clientY / window.innerHeight) * 2 - 1;
     },
     { passive: true }
   );
 
-  /* ---------- 3D tilt cards ---------- */
-  const tiltCards = document.querySelectorAll(".tilt-card");
+  /* ---------- Scroll reveal (reliable visibility) ---------- */
+  const reveals = Array.from(document.querySelectorAll(".reveal"));
 
-  const resetTilt = (el) => {
-    el.style.setProperty("--rx", "0deg");
-    el.style.setProperty("--ry", "0deg");
-  };
+  const showReveal = (el) => el.classList.add("is-visible");
 
-  tiltCards.forEach((card) => {
-    card.addEventListener("pointermove", (e) => {
-      if (reduceMotion || window.innerWidth < 768) return;
-      const rect = card.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / rect.width;
-      const y = (e.clientY - rect.top) / rect.height;
-      const ry = (x - 0.5) * 16;
-      const rx = (0.5 - y) * 12;
-      card.style.setProperty("--rx", `${rx}deg`);
-      card.style.setProperty("--ry", `${ry}deg`);
-    });
-    card.addEventListener("pointerleave", () => resetTilt(card));
-  });
-
-  /* ---------- Scroll reveal + depth ---------- */
-  const reveals = document.querySelectorAll(".reveal");
-  if ("IntersectionObserver" in window) {
+  if (reduceMotion) {
+    reveals.forEach(showReveal);
+  } else if ("IntersectionObserver" in window) {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            entry.target.classList.add("is-visible");
+            showReveal(entry.target);
             observer.unobserve(entry.target);
           }
         });
       },
-      { threshold: 0.12, rootMargin: "0px 0px -48px 0px" }
+      { threshold: 0.05, rootMargin: "0px 0px -8% 0px" }
     );
     reveals.forEach((el) => observer.observe(el));
+
+    // Safety: never leave cards invisible
+    window.setTimeout(() => {
+      reveals.forEach((el) => {
+        if (!el.classList.contains("is-visible")) showReveal(el);
+      });
+    }, 2500);
   } else {
-    reveals.forEach((el) => el.classList.add("is-visible"));
+    reveals.forEach(showReveal);
   }
 
-  /* ---------- Starfield / particle space ---------- */
+  /* ---------- Starfield ---------- */
   const initCanvas = () => {
     if (!canvas || reduceMotion) {
       if (canvas) canvas.style.display = "none";
-      return null;
+      return;
     }
 
     const ctx = canvas.getContext("2d");
@@ -142,23 +128,23 @@
       canvas.style.height = `${h}px`;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      const count = Math.min(90, Math.floor((w * h) / 18000));
+      const count = Math.min(70, Math.floor((w * h) / 22000));
       particles = Array.from({ length: count }, () => ({
         x: Math.random() * w - w / 2,
         y: Math.random() * h - h / 2,
         z: Math.random() * w,
-        s: 0.4 + Math.random() * 1.4,
+        s: 0.4 + Math.random() * 1.2,
         hue: Math.random() > 0.5 ? 190 : 260,
       }));
     };
 
     const draw = () => {
       ctx.clearRect(0, 0, w, h);
-      const cx = w / 2 + curMX * 40;
-      const cy = h / 2 + curMY * 28;
+      const cx = w / 2 + curMX * 24;
+      const cy = h / 2 + curMY * 16;
 
       for (const p of particles) {
-        p.z -= 2.2 + Math.abs(curMX) * 1.5;
+        p.z -= 1.4;
         if (p.z <= 1) {
           p.z = w;
           p.x = Math.random() * w - w / 2;
@@ -168,21 +154,13 @@
         const k = 128 / p.z;
         const x = p.x * k + cx;
         const y = p.y * k + cy;
-        const size = (1 - p.z / w) * 2.6 * p.s;
+        const size = (1 - p.z / w) * 2.2 * p.s;
         const alpha = Math.max(0, 1 - p.z / w);
 
         ctx.beginPath();
-        ctx.fillStyle = `hsla(${p.hue}, 90%, 70%, ${alpha * 0.75})`;
-        ctx.arc(x, y, Math.max(0.4, size), 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${p.hue}, 85%, 70%, ${alpha * 0.65})`;
+        ctx.arc(x, y, Math.max(0.35, size), 0, Math.PI * 2);
         ctx.fill();
-
-        // motion streak
-        ctx.beginPath();
-        ctx.strokeStyle = `hsla(${p.hue}, 90%, 70%, ${alpha * 0.25})`;
-        ctx.lineWidth = size * 0.4;
-        ctx.moveTo(x, y);
-        ctx.lineTo(x - curMX * 12 * k, y - curMY * 8 * k);
-        ctx.stroke();
       }
 
       raf = requestAnimationFrame(draw);
@@ -191,26 +169,20 @@
     resize();
     draw();
     window.addEventListener("resize", resize, { passive: true });
-
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("resize", resize);
-    };
   };
 
   initCanvas();
 
-  /* ---------- RAF: lerp parallax + header ---------- */
+  /* ---------- RAF: smooth parallax lerp ---------- */
   const tick = () => {
-    curMX += (targetMX - curMX) * 0.06;
-    curMY += (targetMY - curMY) * 0.06;
+    curMX += (targetMX - curMX) * 0.045;
+    curMY += (targetMY - curMY) * 0.045;
     document.documentElement.style.setProperty("--mx", curMX.toFixed(4));
     document.documentElement.style.setProperty("--my", curMY.toFixed(4));
-    document.documentElement.style.setProperty("--scroll-y", String(window.scrollY || 0));
 
     if (header) {
       header.style.boxShadow =
-        window.scrollY > 8 ? "0 8px 30px rgba(0, 0, 0, 0.35)" : "none";
+        window.scrollY > 8 ? "0 8px 28px rgba(0, 0, 0, 0.32)" : "none";
     }
 
     requestAnimationFrame(tick);
@@ -223,7 +195,7 @@
       "scroll",
       () => {
         header.style.boxShadow =
-          window.scrollY > 8 ? "0 8px 30px rgba(0, 0, 0, 0.35)" : "none";
+          window.scrollY > 8 ? "0 8px 28px rgba(0, 0, 0, 0.32)" : "none";
       },
       { passive: true }
     );
