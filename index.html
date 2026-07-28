@@ -27,6 +27,43 @@
     <div class="bg-glow bg-glow--purple" data-depth="0.55"></div>
     <div class="bg-glow bg-glow--cyan" data-depth="0.4"></div>
     <div class="bg-glow bg-glow--center" data-depth="0.25"></div>
+    <div class="whale-field" id="whaleField" aria-hidden="true">
+      <div class="whale" id="whale">
+        <svg class="whale-svg" viewBox="0 0 640 240" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="whaleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#9b82ff" stop-opacity="0.55"/>
+              <stop offset="55%" stop-color="#7c5cff" stop-opacity="0.4"/>
+              <stop offset="100%" stop-color="#5ee7f7" stop-opacity="0.28"/>
+            </linearGradient>
+            <filter id="whaleGlow" x="-20%" y="-40%" width="140%" height="180%">
+              <feGaussianBlur stdDeviation="6" result="b"/>
+              <feMerge>
+                <feMergeNode in="b"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+          <g filter="url(#whaleGlow)" fill="url(#whaleGrad)">
+            <!-- body -->
+            <path d="M78 128c28-46 92-78 168-84 74-6 148 10 206 42 38 22 78 40 118 38 18-1 34 2 42 12-34 8-70 4-104-2-20 28-52 48-92 56-62 12-128 4-182-18-36-14-70-28-98-20-26 8-48 28-58 52-4-26 0-52 0-76z"/>
+            <!-- head / jaw -->
+            <path d="M68 136c-18 8-34 26-40 48 22-10 42-16 62-14-6-14-12-24-22-34z" opacity="0.85"/>
+            <!-- eye -->
+            <circle cx="118" cy="118" r="5.5" fill="#e8ecf5" opacity="0.7"/>
+            <circle cx="120" cy="117" r="2.2" fill="#141228" opacity="0.85"/>
+            <!-- pectoral fin -->
+            <path d="M210 148c18 22 28 42 22 58-26-12-48-28-62-48 12-6 26-10 40-10z" opacity="0.75"/>
+            <!-- tail -->
+            <path d="M560 124c28-36 52-58 74-62-8 24-10 46-4 68 22 8 36 26 42 48-38-10-72-22-108-18-8-12-8-24-4-36z"/>
+            <path d="M568 138c24 30 48 52 72 58-16-22-24-44-20-66-18 0-36 2-52 8z" opacity="0.9"/>
+            <!-- belly highlight -->
+            <path d="M150 150c48 18 110 28 168 22 46-4 90-18 124-36-40 8-84 10-128 4-52-8-104-18-164 10z" opacity="0.22"/>
+          </g>
+        </svg>
+        <span class="whale-wake"></span>
+      </div>
+    </div>
     <canvas id="spaceCanvas" class="space-canvas"></canvas>
     <div class="scanlines"></div>
     <div class="film-grain"></div>

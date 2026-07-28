@@ -308,6 +308,103 @@
 
   initParticleField();
 
+  /* Irregular swimming whale */
+  const initWhale = () => {
+    const whale = document.getElementById("whale");
+    if (!whale || reduceMotion) {
+      if (whale) whale.style.display = "none";
+      return;
+    }
+
+    let w = window.innerWidth;
+    let h = window.innerHeight;
+    let x = w * -0.15;
+    let y = h * 0.42;
+    let vx = 0.55 + Math.random() * 0.35;
+    let vy = (Math.random() - 0.5) * 0.2;
+    let t = Math.random() * 100;
+    let nextTurn = 180 + Math.random() * 320;
+    let frames = 0;
+
+    const resize = () => {
+      w = window.innerWidth;
+      h = window.innerHeight;
+    };
+
+    const swim = () => {
+      frames += 1;
+      t += 0.016;
+
+      // Layered sines → irregular path
+      const swayX = Math.sin(t * 0.35) * 0.25 + Math.sin(t * 0.11) * 0.4;
+      const swayY =
+        Math.sin(t * 0.27) * 0.55 +
+        Math.sin(t * 0.73) * 0.28 +
+        Math.cos(t * 0.19) * 0.35;
+
+      vx += swayX * 0.012;
+      vy += swayY * 0.02;
+
+      // Occasional heading change
+      if (frames >= nextTurn) {
+        const flipChance = Math.random();
+        if (flipChance > 0.55) {
+          vx *= -1;
+        } else {
+          vx += (Math.random() - 0.5) * 0.9;
+          vy += (Math.random() - 0.5) * 0.5;
+        }
+        nextTurn = frames + 160 + Math.random() * 420;
+      }
+
+      // Keep speed in a gentle band
+      const speed = Math.hypot(vx, vy) || 0.001;
+      const target = 0.45 + Math.abs(Math.sin(t * 0.08)) * 0.55;
+      const scale = target / speed;
+      vx *= 0.96 * scale + 0.04;
+      vy *= 0.96 * scale + 0.04;
+
+      x += vx;
+      y += vy;
+
+      // Soft vertical bounds (mid-background band)
+      const minY = h * 0.18;
+      const maxY = h * 0.72;
+      if (y < minY) {
+        y = minY;
+        vy = Math.abs(vy) * 0.7;
+      } else if (y > maxY) {
+        y = maxY;
+        vy = -Math.abs(vy) * 0.7;
+      }
+
+      // Wrap horizontally off-screen
+      const whaleW = Math.min(w * 0.52, 560);
+      if (x > w + whaleW * 0.35) {
+        x = -whaleW * 0.35;
+        y = h * (0.28 + Math.random() * 0.35);
+      } else if (x < -whaleW * 0.4) {
+        x = w + whaleW * 0.3;
+        y = h * (0.28 + Math.random() * 0.35);
+      }
+
+      const facingLeft = vx < 0;
+      whale.classList.toggle("is-flipped", facingLeft);
+
+      const depthParallax = curMX * -18;
+      const depthY = curMY * -10;
+      whale.style.transform = `translate3d(${x + depthParallax}px, ${y + depthY}px, 0)`;
+
+      requestAnimationFrame(swim);
+    };
+
+    resize();
+    window.addEventListener("resize", resize, { passive: true });
+    requestAnimationFrame(swim);
+  };
+
+  initWhale();
+
   const tick = () => {
     curMX += (targetMX - curMX) * 0.045;
     curMY += (targetMY - curMY) * 0.045;

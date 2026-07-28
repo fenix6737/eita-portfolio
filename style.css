@@ -231,6 +231,73 @@ strong {
   transform: translate3d(calc(var(--mx) * 8px), calc(var(--my) * 6px), 0);
 }
 
+/* Background whale */
+.whale-field {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.whale {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: min(52vw, 560px);
+  will-change: transform;
+  opacity: 0.42;
+  filter: drop-shadow(0 0 28px rgba(124, 92, 255, 0.25));
+  transform: translate3d(-40%, 40%, 0);
+}
+
+.whale-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  transform-origin: center;
+  animation: whaleBob 5.5s ease-in-out infinite;
+}
+
+.whale.is-flipped .whale-svg {
+  transform: scaleX(-1);
+  animation-name: whaleBobFlip;
+}
+
+.whale-wake {
+  position: absolute;
+  right: 8%;
+  top: 48%;
+  width: 28%;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(94, 231, 247, 0.35), transparent);
+  filter: blur(1.5px);
+  opacity: 0.55;
+  transform: translateY(-50%);
+  animation: wakePulse 2.8s ease-in-out infinite;
+}
+
+.whale.is-flipped .whale-wake {
+  right: auto;
+  left: 8%;
+  background: linear-gradient(270deg, rgba(94, 231, 247, 0.35), transparent);
+}
+
+@keyframes whaleBob {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-10px) rotate(2deg); }
+}
+
+@keyframes whaleBobFlip {
+  0%, 100% { transform: scaleX(-1) translateY(0) rotate(2deg); }
+  50% { transform: scaleX(-1) translateY(-10px) rotate(-2deg); }
+}
+
+@keyframes wakePulse {
+  0%, 100% { opacity: 0.25; transform: translateY(-50%) scaleX(0.85); }
+  50% { opacity: 0.6; transform: translateY(-50%) scaleX(1.15); }
+}
+
 @keyframes glowBreathe {
   0%, 100% { filter: blur(90px); opacity: 0.4; }
   50% { filter: blur(110px); opacity: 0.65; }
@@ -1869,7 +1936,8 @@ body.is-ready .cine-in {
   }
 
   .scanlines,
-  .film-grain {
+  .film-grain,
+  .whale-field {
     display: none;
   }
 }
