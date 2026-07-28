@@ -231,7 +231,7 @@ strong {
   transform: translate3d(calc(var(--mx) * 8px), calc(var(--my) * 6px), 0);
 }
 
-/* Background whale */
+/* Background whale — articulated swim */
 .whale-field {
   position: absolute;
   inset: 0;
@@ -243,10 +243,10 @@ strong {
   position: absolute;
   left: 0;
   top: 0;
-  width: min(52vw, 560px);
+  width: min(58vw, 620px);
   will-change: transform;
-  opacity: 0.42;
-  filter: drop-shadow(0 0 28px rgba(124, 92, 255, 0.25));
+  opacity: 0.5;
+  filter: drop-shadow(0 12px 28px rgba(124, 92, 255, 0.28));
   transform: translate3d(-40%, 40%, 0);
 }
 
@@ -254,48 +254,81 @@ strong {
   display: block;
   width: 100%;
   height: auto;
-  transform-origin: center;
-  animation: whaleBob 5.5s ease-in-out infinite;
+  overflow: visible;
 }
 
 .whale.is-flipped .whale-svg {
   transform: scaleX(-1);
-  animation-name: whaleBobFlip;
+}
+
+.whale #whaleBody,
+.whale #whaleHead,
+.whale #whaleFin,
+.whale #whalePeduncle,
+.whale #whaleFluke {
+  transform-box: fill-box;
+  transform-origin: center;
+  will-change: transform;
+}
+
+.whale #whaleBody {
+  transform-origin: 55% 55%;
+}
+
+.whale #whaleHead {
+  transform-origin: 70% 50%;
+}
+
+.whale #whaleFin {
+  transform-origin: 20% 15%;
+}
+
+.whale #whalePeduncle {
+  transform-origin: 8% 50%;
+}
+
+.whale #whaleFluke {
+  transform-origin: 12% 50%;
 }
 
 .whale-wake {
   position: absolute;
-  right: 8%;
-  top: 48%;
-  width: 28%;
-  height: 2px;
+  right: 4%;
+  top: 52%;
+  width: 34%;
+  height: 3px;
   border-radius: 999px;
-  background: linear-gradient(90deg, rgba(94, 231, 247, 0.35), transparent);
-  filter: blur(1.5px);
-  opacity: 0.55;
+  background: linear-gradient(90deg, rgba(94, 231, 247, 0.45), transparent 80%);
+  filter: blur(2px);
+  opacity: 0.4;
+  transform-origin: right center;
   transform: translateY(-50%);
-  animation: wakePulse 2.8s ease-in-out infinite;
+  will-change: transform, opacity;
 }
 
 .whale.is-flipped .whale-wake {
   right: auto;
-  left: 8%;
-  background: linear-gradient(270deg, rgba(94, 231, 247, 0.35), transparent);
+  left: 4%;
+  background: linear-gradient(270deg, rgba(94, 231, 247, 0.45), transparent 80%);
+  transform-origin: left center;
 }
 
-@keyframes whaleBob {
-  0%, 100% { transform: translateY(0) rotate(-2deg); }
-  50% { transform: translateY(-10px) rotate(2deg); }
+.whale-bubbles {
+  position: absolute;
+  inset: 20% 8% 30% 55%;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 20% 60%, rgba(255, 255, 255, 0.35) 0 2px, transparent 3px),
+    radial-gradient(circle at 45% 35%, rgba(94, 231, 247, 0.4) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 70% 55%, rgba(180, 163, 255, 0.35) 0 2px, transparent 3px);
+  background-size: 100% 100%;
+  opacity: 0;
+  filter: blur(0.4px);
+  will-change: transform, opacity;
 }
 
-@keyframes whaleBobFlip {
-  0%, 100% { transform: scaleX(-1) translateY(0) rotate(2deg); }
-  50% { transform: scaleX(-1) translateY(-10px) rotate(-2deg); }
-}
-
-@keyframes wakePulse {
-  0%, 100% { opacity: 0.25; transform: translateY(-50%) scaleX(0.85); }
-  50% { opacity: 0.6; transform: translateY(-50%) scaleX(1.15); }
+.whale.is-flipped .whale-bubbles {
+  inset: 20% 55% 30% 8%;
 }
 
 @keyframes glowBreathe {

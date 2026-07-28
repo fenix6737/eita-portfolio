@@ -308,92 +308,138 @@
 
   initParticleField();
 
-  /* Irregular swimming whale */
+  /* Articulated swimming whale */
   const initWhale = () => {
     const whale = document.getElementById("whale");
-    if (!whale || reduceMotion) {
+    const body = document.getElementById("whaleBody");
+    const head = document.getElementById("whaleHead");
+    const fin = document.getElementById("whaleFin");
+    const peduncle = document.getElementById("whalePeduncle");
+    const fluke = document.getElementById("whaleFluke");
+    const wake = whale ? whale.querySelector(".whale-wake") : null;
+    const bubbles = document.getElementById("whaleBubbles");
+
+    if (!whale || !body || reduceMotion) {
       if (whale) whale.style.display = "none";
       return;
     }
 
     let w = window.innerWidth;
     let h = window.innerHeight;
-    let x = w * -0.15;
-    let y = h * 0.42;
-    let vx = 0.55 + Math.random() * 0.35;
-    let vy = (Math.random() - 0.5) * 0.2;
-    let t = Math.random() * 100;
-    let nextTurn = 180 + Math.random() * 320;
+    let x = w * -0.2;
+    let y = h * 0.4;
+    let vx = 0.7;
+    let vy = 0.05;
+    let t = 0;
+    let phase = Math.random() * Math.PI * 2;
+    let nextTurn = 220 + Math.random() * 280;
     let frames = 0;
+    let pitch = 0;
+    let bank = 0;
+    let last = performance.now();
 
     const resize = () => {
       w = window.innerWidth;
       h = window.innerHeight;
     };
 
-    const swim = () => {
+    const swim = (now) => {
+      const dt = Math.min(0.033, (now - last) / 1000);
+      last = now;
       frames += 1;
-      t += 0.016;
+      t += dt;
 
-      // Layered sines → irregular path
-      const swayX = Math.sin(t * 0.35) * 0.25 + Math.sin(t * 0.11) * 0.4;
-      const swayY =
-        Math.sin(t * 0.27) * 0.55 +
-        Math.sin(t * 0.73) * 0.28 +
-        Math.cos(t * 0.19) * 0.35;
+      // Irregular path forces
+      vx += (Math.sin(t * 0.33) * 0.22 + Math.sin(t * 0.09) * 0.35) * dt * 8;
+      vy += (Math.sin(t * 0.41) * 0.45 + Math.cos(t * 0.17) * 0.3) * dt * 10;
 
-      vx += swayX * 0.012;
-      vy += swayY * 0.02;
-
-      // Occasional heading change
       if (frames >= nextTurn) {
-        const flipChance = Math.random();
-        if (flipChance > 0.55) {
-          vx *= -1;
-        } else {
-          vx += (Math.random() - 0.5) * 0.9;
-          vy += (Math.random() - 0.5) * 0.5;
+        if (Math.random() > 0.5) vx *= -1;
+        else {
+          vx += (Math.random() - 0.5) * 1.1;
+          vy += (Math.random() - 0.5) * 0.7;
         }
-        nextTurn = frames + 160 + Math.random() * 420;
+        nextTurn = frames + 140 + Math.random() * 380;
       }
 
-      // Keep speed in a gentle band
+      // Speed band (faster when thrusting)
       const speed = Math.hypot(vx, vy) || 0.001;
-      const target = 0.45 + Math.abs(Math.sin(t * 0.08)) * 0.55;
+      const cruise = 0.55 + Math.abs(Math.sin(t * 0.07)) * 0.65;
+      const thrustBoost = 0.15 + Math.max(0, Math.sin(phase)) * 0.35;
+      const target = cruise + thrustBoost;
       const scale = target / speed;
-      vx *= 0.96 * scale + 0.04;
-      vy *= 0.96 * scale + 0.04;
+      vx = vx * (0.9 + 0.1 * scale);
+      vy = vy * (0.9 + 0.1 * scale);
 
-      x += vx;
-      y += vy;
+      x += vx * (dt * 60);
+      y += vy * (dt * 60);
 
-      // Soft vertical bounds (mid-background band)
-      const minY = h * 0.18;
-      const maxY = h * 0.72;
+      const minY = h * 0.16;
+      const maxY = h * 0.7;
       if (y < minY) {
         y = minY;
-        vy = Math.abs(vy) * 0.7;
+        vy = Math.abs(vy) * 0.65;
       } else if (y > maxY) {
         y = maxY;
-        vy = -Math.abs(vy) * 0.7;
+        vy = -Math.abs(vy) * 0.65;
       }
 
-      // Wrap horizontally off-screen
-      const whaleW = Math.min(w * 0.52, 560);
-      if (x > w + whaleW * 0.35) {
-        x = -whaleW * 0.35;
-        y = h * (0.28 + Math.random() * 0.35);
-      } else if (x < -whaleW * 0.4) {
-        x = w + whaleW * 0.3;
-        y = h * (0.28 + Math.random() * 0.35);
+      const whaleW = Math.min(w * 0.58, 620);
+      if (x > w + whaleW * 0.3) {
+        x = -whaleW * 0.3;
+        y = h * (0.26 + Math.random() * 0.34);
+      } else if (x < -whaleW * 0.35) {
+        x = w + whaleW * 0.25;
+        y = h * (0.26 + Math.random() * 0.34);
       }
 
       const facingLeft = vx < 0;
       whale.classList.toggle("is-flipped", facingLeft);
 
+      // Swim cycle — beat rate follows speed
+      const spd = Math.hypot(vx, vy);
+      phase += dt * (2.4 + spd * 2.8);
+      const amp = 0.75 + Math.min(0.55, spd * 0.45);
+      const s = Math.sin(phase);
+      const c = Math.cos(phase);
+
+      // Tail-driven locomotion angles (degrees)
+      const flukeDeg = s * 26 * amp;
+      const peduncleDeg = s * 14 * amp;
+      const bodyDeg = s * 5 * amp;
+      const headDeg = -s * 4.5 * amp;
+      const finDeg = Math.sin(phase * 0.9 + 1.1) * 18 * amp;
+
+      // Pitch follows vertical velocity; bank into turns
+      const desiredPitch = Math.max(-12, Math.min(12, (vy / (Math.abs(vx) + 0.2)) * 10));
+      const desiredBank = Math.max(-8, Math.min(8, -vy * 4));
+      pitch += (desiredPitch - pitch) * 0.06;
+      bank += (desiredBank - bank) * 0.05;
+
+      body.style.transform = `rotate(${bodyDeg + pitch * 0.35}deg)`;
+      head.style.transform = `rotate(${headDeg}deg)`;
+      fin.style.transform = `rotate(${finDeg}deg)`;
+      peduncle.style.transform = `rotate(${peduncleDeg}deg)`;
+      fluke.style.transform = `rotate(${flukeDeg}deg)`;
+
+      if (wake) {
+        const wakeScale = 0.75 + (0.5 + s * 0.5) * 0.7;
+        const wakeOpacity = 0.2 + (0.5 + s * 0.5) * 0.45;
+        wake.style.opacity = String(wakeOpacity);
+        wake.style.transform = facingLeft
+          ? `translateY(-50%) scaleX(${wakeScale})`
+          : `translateY(-50%) scaleX(${wakeScale})`;
+      }
+
+      if (bubbles) {
+        const burst = Math.max(0, s);
+        bubbles.style.opacity = String(burst * 0.55);
+        bubbles.style.transform = `translate(${facingLeft ? -burst * 10 : burst * 10}px, ${-burst * 14}px)`;
+      }
+
       const depthParallax = curMX * -18;
       const depthY = curMY * -10;
-      whale.style.transform = `translate3d(${x + depthParallax}px, ${y + depthY}px, 0)`;
+      whale.style.transform = `translate3d(${x + depthParallax}px, ${y + depthY}px, 0) rotate(${bank}deg)`;
 
       requestAnimationFrame(swim);
     };
