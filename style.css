@@ -1358,6 +1358,93 @@ body.is-ready .cine-in {
   display: none;
 }
 
+/* Dev strip — compact programmer promo */
+.dev-strip {
+  display: grid;
+  gap: 1.5rem;
+  padding: 1.5rem 1.6rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.dev-strip-intro .section-label {
+  margin-bottom: 0.4rem;
+}
+
+.dev-strip-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+}
+
+.dev-strip-desc {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.dev-products {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.dev-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1.1rem 1.2rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  transition: transform 0.4s var(--ease-out), border-color 0.35s ease, box-shadow 0.35s ease;
+}
+
+.dev-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(124, 92, 255, 0.45);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+}
+
+.dev-card-tag {
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--purple-soft);
+}
+
+.dev-card strong {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+}
+
+.dev-card p {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.dev-card .text-link {
+  margin-top: 0.35rem;
+  padding-top: 0;
+  font-size: 0.85rem;
+}
+
+@media (min-width: 768px) {
+  .dev-strip {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.3fr);
+    align-items: center;
+    gap: 2rem;
+    padding: 1.75rem 2rem;
+  }
+
+  .dev-products {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 /* Contact */
 .contact-grid {
   display: grid;
