@@ -2,6 +2,22 @@
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (reduceMotion) document.body.classList.add("reduce-motion");
 
+  // Discourage copying UI text / buttons
+  const blockCopy = (event) => {
+    event.preventDefault();
+  };
+  document.addEventListener("copy", blockCopy);
+  document.addEventListener("cut", blockCopy);
+  document.addEventListener("selectstart", blockCopy);
+  document.addEventListener("dragstart", blockCopy);
+  document.addEventListener("contextmenu", (event) => {
+    const tag = (event.target && event.target.tagName) || "";
+    if (/^(A|BUTTON|SPAN|DIV|P|H1|H2|H3|H4|LI|NAV|HEADER|MAIN|SECTION)$/i.test(tag) ||
+        (event.target && event.target.closest && event.target.closest("a, button, .btn"))) {
+      event.preventDefault();
+    }
+  });
+
   const menuToggle = document.getElementById("menuToggle");
   const mobileNav = document.getElementById("mobileNav");
   const header = document.querySelector(".site-header");
@@ -350,7 +366,7 @@
     let nextSteer = 8 + Math.random() * 10; // seconds
     let pitch = 0;
     let bank = 0;
-    let facingLeft = false;
+    let facingRight = true; // SVG art faces left; flip when moving right
     let last = performance.now();
 
     const TAU = Math.PI * 2;
@@ -386,7 +402,7 @@
       if (y < minY) targetHeading = lerpAngle(targetHeading, Math.PI * 0.5, 0.035);
       else if (y > maxY) targetHeading = lerpAngle(targetHeading, -Math.PI * 0.5, 0.035);
 
-      // Slow turn rate (~25°/s max feel)
+      // Slow turn rate
       heading = lerpAngle(heading, targetHeading, 1 - Math.pow(0.92, dt * 60));
 
       // Calm cruise + light tail thrust
@@ -406,11 +422,11 @@
       if (x > w + whaleW * 0.35) x = -whaleW * 0.25;
       else if (x < -whaleW * 0.35) x = w + whaleW * 0.2;
 
-      // Flip facing with hysteresis so it doesn't twitch
+      // SVG default faces left — flip when heading right (hysteresis)
       const hx = Math.cos(heading);
-      if (!facingLeft && hx < -0.25) facingLeft = true;
-      else if (facingLeft && hx > 0.25) facingLeft = false;
-      whale.classList.toggle("is-flipped", facingLeft);
+      if (!facingRight && hx > 0.25) facingRight = true;
+      else if (facingRight && hx < -0.25) facingRight = false;
+      whale.classList.toggle("is-flipped", facingRight);
 
       // Slow swim cycle
       phase += dt * (1.35 + speed * 1.8);
@@ -446,7 +462,7 @@
       if (bubbles) {
         const burst = Math.max(0, s);
         bubbles.style.opacity = String(0.1 + burst * 0.45);
-        bubbles.style.transform = `translate(${facingLeft ? -burst * 10 : burst * 10}px, ${-burst * 12}px)`;
+        bubbles.style.transform = `translate(${facingRight ? burst * 10 : -burst * 10}px, ${-burst * 12}px)`;
       }
 
       const depthParallax = curMX * -18;
