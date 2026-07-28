@@ -20,7 +20,10 @@ python -m http.server 8080
 npx serve .
 ```
 
-## デプロイ
+## 公開URL
+
+- サイト: https://fenix6737.github.io/eita-portfolio/
+- リポジトリ: https://github.com/fenix6737/eita-portfolio
 
 `main` ブランチを GitHub Pages のソースに設定しています。
 プッシュすると自動反映されます。
