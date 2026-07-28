@@ -120,7 +120,7 @@
         const alpha = Math.max(0, 1 - p.z / w);
 
         ctx.beginPath();
-        ctx.fillStyle = `hsla(${p.hue}, 85%, 70%, ${alpha * 0.65})`;
+        ctx.fillStyle = `hsla(${p.hue}, 85%, 78%, ${alpha * 0.85})`;
         ctx.arc(x, y, Math.max(0.35, size), 0, Math.PI * 2);
         ctx.fill();
       }
